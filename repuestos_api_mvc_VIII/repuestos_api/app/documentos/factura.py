@@ -5,6 +5,7 @@ El XML no es el UBL 2.1 firmado que exige la DIAN; para producción se requiere 
 from __future__ import annotations
 
 import os
+import re
 from datetime import timedelta, timezone
 from decimal import Decimal
 from xml.sax.saxutils import escape
@@ -20,6 +21,9 @@ VERDE = colors.HexColor("#188a31")
 BOGOTA = timezone(timedelta(hours=-5))          # Colombia no usa horario de verano
 
 
+_NOMBRE_VALIDO = re.compile(r"[A-Za-z0-9-]{1,40}")
+
+
 def _m(valor) -> str:
     return "$ " + f"{Decimal(valor):,.0f}".replace(",", ".")
 
@@ -30,10 +34,20 @@ class DocumentosFactura:
 
     def generar(self, factura: dict, lineas: list[dict], cliente: str, empresa: dict) -> tuple[str, str]:
         os.makedirs(self._dir, exist_ok=True)
-        base = os.path.join(self._dir, factura["invoice_number"])
+        base = self._ruta_segura(factura["invoice_number"])
         self._pdf(base + ".pdf", factura, lineas, cliente, empresa)
         self._xml(base + ".xml", factura, lineas, cliente, empresa)
         return base + ".pdf", base + ".xml"
+
+    def _ruta_segura(self, numero: str) -> str:
+        """Construye la ruta del archivo sin permitir salir del directorio de facturas."""
+        if not _NOMBRE_VALIDO.fullmatch(str(numero)):
+            raise ValueError("Número de factura no válido para nombre de archivo")
+        directorio = os.path.realpath(self._dir)
+        ruta = os.path.realpath(os.path.join(directorio, os.path.basename(str(numero))))
+        if os.path.dirname(ruta) != directorio:
+            raise ValueError("Ruta de factura fuera del directorio permitido")
+        return ruta
 
     @staticmethod
     def _pdf(ruta, f, lineas, cliente, empresa) -> None:
