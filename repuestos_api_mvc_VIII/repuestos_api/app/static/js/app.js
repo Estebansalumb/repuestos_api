@@ -154,6 +154,7 @@ async function render() {
     if (parts[0] === 'pedidos' && !S.tok) return go('/login?next=pedidos');
     root.innerHTML = storeShell();                       // el HTML no recibe nada de la URL
     marcarSeccion(parts[0] || 'inicio');                  // la sección activa se marca solo con classList
+    $('#sq').value = q.get('q') || '';                    // el texto buscado se asigna como valor, no como HTML
     bindShell();
     const view = {'': home, inicio: home, productos: productos, producto: producto, compra: compra, nosotros: nosotros,
       contacto: contacto, pedidos: pedidos}[parts[0] || ''] || notFound;
@@ -197,7 +198,7 @@ function storeShell() {
     <div class="dd" id="catdd"><button class="catbtn" aria-haspopup="true" aria-expanded="false">${I('menu', 20)} <span>${t('categories')}</span> <i class="car">${I('down', 18)}</i></button>
       <div class="dd-menu" id="catmenu"></div></div>
     <form class="search" id="searchf" role="search"><label class="sr" for="sq">${t('search')}</label>
-      <input id="sq" name="q" placeholder="${t('search')}" value="${esc(route().q.get('q') || '')}" autocomplete="off">
+      <input id="sq" name="q" placeholder="${t('search')}" autocomplete="off">
       <button aria-label="Buscar">${I('search', 22)}</button></form>
   </div></div>
   <main id="main"></main>
