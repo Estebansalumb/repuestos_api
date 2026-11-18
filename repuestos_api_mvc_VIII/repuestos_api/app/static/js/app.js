@@ -133,7 +133,10 @@ async function busy(btn, fn) {
 }
 
 /* ================================================================ RENDER */
-const PAGINAS_TIENDA = ['inicio', 'productos', 'producto', 'compra', 'nosotros', 'contacto', 'pedidos'];
+function marcarSeccion(seccion) {
+  const activa = seccion === 'producto' ? 'productos' : seccion;
+  $$('[data-nav]').forEach(el => el.classList.toggle('on', el.dataset.nav === activa));
+}
 async function render() {
   if (!S.booted) await boot();
   S.timers.forEach(clearInterval); S.timers = [];
@@ -149,8 +152,8 @@ async function render() {
     }
     if (parts[0] === 'login' || parts[0] === 'registro') return await authView(parts[0], q);
     if (parts[0] === 'pedidos' && !S.tok) return go('/login?next=pedidos');
-    const pagina = PAGINAS_TIENDA.find(k => k === parts[0]) ?? (parts[0] ? 'otra' : '');
-    root.innerHTML = storeShell(pagina);
+    root.innerHTML = storeShell();                       // el HTML no recibe nada de la URL
+    marcarSeccion(parts[0] || 'inicio');                  // la sección activa se marca solo con classList
     bindShell();
     const view = {'': home, inicio: home, productos: productos, producto: producto, compra: compra, nosotros: nosotros,
       contacto: contacto, pedidos: pedidos}[parts[0] || ''] || notFound;
@@ -160,7 +163,7 @@ async function render() {
 }
 
 /* ---------------- shell de la tienda ---------------- */
-function storeShell(cur) {
+function storeShell() {
   const n = cartCount();
   const userMenu = S.tok ? `<div class="dd" id="userdd"><button class="btn ghost sm" aria-haspopup="true" aria-expanded="false">${I('user', 16)} ${esc(S.name)}</button>
       <div class="dd-menu" style="left:auto;right:0;min-width:200px">
@@ -179,11 +182,11 @@ function storeShell(cur) {
   <header class="mainhead"><div class="wrap">
     <a href="#/" class="logo" aria-label="Universal de Repuestos WG — inicio">${ART.logo(46)}<span><b>Universal de</b><b>Repuestos <small>WG</small></b></span></a>
     <nav class="mainnav" id="mainnav" aria-label="Principal">
-      <a href="#/" class="${!cur || cur === 'inicio' ? 'on' : ''}">${t('home')}</a>
-      <div class="dd" id="proddd"><button aria-haspopup="true" aria-expanded="false" class="${cur === 'productos' || cur === 'producto' ? 'on' : ''}">${t('products')} ▾</button>
+      <a href="#/" data-nav="inicio">${t('home')}</a>
+      <div class="dd" id="proddd"><button aria-haspopup="true" aria-expanded="false" data-nav="productos">${t('products')} ▾</button>
         <div class="dd-menu" id="prodmenu"><a href="#/productos"><b>${t('all')}</b></a></div></div>
-      <a href="#/nosotros" class="${cur === 'nosotros' ? 'on' : ''}">${t('about')}</a>
-      <a href="#/contacto" class="${cur === 'contacto' ? 'on' : ''}">${t('contact')}</a>
+      <a href="#/nosotros" data-nav="nosotros">${t('about')}</a>
+      <a href="#/contacto" data-nav="contacto">${t('contact')}</a>
     </nav>
     <div class="headact">${userMenu}
       <a href="#/compra" class="cartbtn" aria-label="${t('cart')}: ${n} productos">${I('cart', 28)}<span class="n" data-cartn ${n ? '' : 'hidden'}>${n}</span></a>
