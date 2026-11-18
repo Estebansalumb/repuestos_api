@@ -47,7 +47,10 @@ const t = k => (TXT[S.lang] || TXT.es)[k] || TXT.es[k] || k;
 function toast(msg, type = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + type;
-  el.innerHTML = `${I(type === 'bad' ? 'alert' : type === 'ok' ? 'check' : 'tag', 18)}<span>${esc(msg)}</span>`;
+  el.innerHTML = I(type === 'bad' ? 'alert' : type === 'ok' ? 'check' : 'tag', 18);   // icono: SVG constante
+  const texto = document.createElement('span');
+  texto.textContent = String(msg ?? '');   // el mensaje nunca se interpreta como HTML
+  el.append(texto);
   $('#toasts').append(el);
   setTimeout(() => el.remove(), type === 'bad' ? 6000 : 3500);
 }
@@ -94,7 +97,7 @@ async function logout(silent, todas = false) {
   setSession(null); S.cache = {};
   if (!silent) { toast(todas ? 'Se cerraron todas tus sesiones' : 'Sesión cerrada'); go('/'); }
 }
-function go(path) { if (location.hash === '#' + path) render(); else location.hash = path; }
+function go(path) { if (location.hash === '#' + path) void render(); else location.hash = path; }
 function route() {
   const h = location.hash.replace(/^#\/?/, '');
   const [p, qs] = h.split('?');
@@ -130,6 +133,10 @@ async function busy(btn, fn) {
 }
 
 /* ================================================================ RENDER */
+function marcarSeccion(seccion) {
+  const activa = seccion === 'producto' ? 'productos' : seccion;
+  $$('[data-nav]').forEach(el => el.classList.toggle('on', el.dataset.nav === activa));
+}
 async function render() {
   if (!S.booted) await boot();
   S.timers.forEach(clearInterval); S.timers = [];
@@ -145,7 +152,9 @@ async function render() {
     }
     if (parts[0] === 'login' || parts[0] === 'registro') return await authView(parts[0], q);
     if (parts[0] === 'pedidos' && !S.tok) return go('/login?next=pedidos');
-    root.innerHTML = storeShell(parts[0] || '');
+    root.innerHTML = storeShell();                       // el HTML no recibe nada de la URL
+    marcarSeccion(parts[0] || 'inicio');                  // la sección activa se marca solo con classList
+    $('#sq').value = q.get('q') || '';                    // el texto buscado se asigna como valor, no como HTML
     bindShell();
     const view = {'': home, inicio: home, productos: productos, producto: producto, compra: compra, nosotros: nosotros,
       contacto: contacto, pedidos: pedidos}[parts[0] || ''] || notFound;
@@ -155,7 +164,7 @@ async function render() {
 }
 
 /* ---------------- shell de la tienda ---------------- */
-function storeShell(cur) {
+function storeShell() {
   const n = cartCount();
   const userMenu = S.tok ? `<div class="dd" id="userdd"><button class="btn ghost sm" aria-haspopup="true" aria-expanded="false">${I('user', 16)} ${esc(S.name)}</button>
       <div class="dd-menu" style="left:auto;right:0;min-width:200px">
@@ -174,11 +183,11 @@ function storeShell(cur) {
   <header class="mainhead"><div class="wrap">
     <a href="#/" class="logo" aria-label="Universal de Repuestos WG — inicio">${ART.logo(46)}<span><b>Universal de</b><b>Repuestos <small>WG</small></b></span></a>
     <nav class="mainnav" id="mainnav" aria-label="Principal">
-      <a href="#/" class="${!cur || cur === 'inicio' ? 'on' : ''}">${t('home')}</a>
-      <div class="dd" id="proddd"><button aria-haspopup="true" aria-expanded="false" class="${cur === 'productos' || cur === 'producto' ? 'on' : ''}">${t('products')} ▾</button>
+      <a href="#/" data-nav="inicio">${t('home')}</a>
+      <div class="dd" id="proddd"><button aria-haspopup="true" aria-expanded="false" data-nav="productos">${t('products')} ▾</button>
         <div class="dd-menu" id="prodmenu"><a href="#/productos"><b>${t('all')}</b></a></div></div>
-      <a href="#/nosotros" class="${cur === 'nosotros' ? 'on' : ''}">${t('about')}</a>
-      <a href="#/contacto" class="${cur === 'contacto' ? 'on' : ''}">${t('contact')}</a>
+      <a href="#/nosotros" data-nav="nosotros">${t('about')}</a>
+      <a href="#/contacto" data-nav="contacto">${t('contact')}</a>
     </nav>
     <div class="headact">${userMenu}
       <a href="#/compra" class="cartbtn" aria-label="${t('cart')}: ${n} productos">${I('cart', 28)}<span class="n" data-cartn ${n ? '' : 'hidden'}>${n}</span></a>
@@ -189,7 +198,7 @@ function storeShell(cur) {
     <div class="dd" id="catdd"><button class="catbtn" aria-haspopup="true" aria-expanded="false">${I('menu', 20)} <span>${t('categories')}</span> <i class="car">${I('down', 18)}</i></button>
       <div class="dd-menu" id="catmenu"></div></div>
     <form class="search" id="searchf" role="search"><label class="sr" for="sq">${t('search')}</label>
-      <input id="sq" name="q" placeholder="${t('search')}" value="${esc(route().q.get('q') || '')}" autocomplete="off">
+      <input id="sq" name="q" placeholder="${t('search')}" autocomplete="off">
       <button aria-label="Buscar">${I('search', 22)}</button></form>
   </div></div>
   <main id="main"></main>
@@ -201,7 +210,7 @@ function storeShell(cur) {
   </div><div class="copy">© ${new Date().getFullYear()} Universal de Repuestos WG · Precios en pesos colombianos con IVA incluido.</div></div></footer>`;
 }
 function bindShell() {
-  $('#lang').onchange = e => { S.lang = e.target.value; store.set('lang', S.lang); render(); };
+  $('#lang').onchange = e => { S.lang = e.target.value; store.set('lang', S.lang); void render(); };
   $('#theme').onchange = e => { S.theme = e.target.value; store.set('theme', S.theme); document.documentElement.dataset.theme = S.theme; };
   $('#searchf').onsubmit = e => { e.preventDefault(); const v = $('#sq').value.trim(); go('/productos' + (v ? '?q=' + encodeURIComponent(v) : '')); };
   $('#menubtn').onclick = () => $('#mainnav').classList.toggle('open');
@@ -277,7 +286,7 @@ async function home(parts, q) {
   <section class="section wrap"><h2 class="stitle g">Radiadores</h2><p class="ssub">Los más pedidos esta semana</p><div class="products" id="feat">${skeleton(4)}</div>
     <p class="center" style="margin-top:22px"><a class="btn" href="#/productos?catname=Radiadores">Ver todos los radiadores</a></p></section>`;
   carousel();
-  vehicleSelector();
+  void vehicleSelector();
   if (q.get('filtro')) setTimeout(() => { $('#vsel').scrollIntoView({block: 'center'}); $('#vs-brand').focus(); }, 50);
   const [cats, prods] = await Promise.all([loadCats(), loadAll()]);
   const count = {};
@@ -308,7 +317,7 @@ async function vehicleSelector() {
   const used = brands.filter(br => cars.some(c => c.car_brand_id === br.car_brand_id));
   b.innerHTML += used.map(br => `<option value="${br.car_brand_id}">${esc(br.name)}</option>`).join('');
   b.onchange = () => {
-    const names = [...new Set(cars.filter(c => c.car_brand_id == b.value).map(c => c.name))].sort();
+    const names = [...new Set(cars.filter(c => c.car_brand_id == b.value).map(c => c.name))].sort((x, y) => x.localeCompare(y, 'es'));
     mo.innerHTML = `<option value="">${t('model')}</option>` + names.map(n => `<option>${esc(n)}</option>`).join('');
     mo.disabled = !b.value; y.innerHTML = `<option value="">${t('year')}</option>`; y.disabled = true;
   };
@@ -514,7 +523,7 @@ function drawCheckout() {
     $$('input[name=method]').forEach(r => r.onchange = () => { CK.method = r.value; fields(); });
     if ($('#back')) $('#back').onclick = () => { CK.step = 1; CK.error = ''; drawCheckout(); };
     if ($('#later')) $('#later').onclick = e => busy(e.currentTarget, () => submitCheckout(false));
-    $('#ck2').onsubmit = e => { e.preventDefault(); const extra = validatePay(); if (extra) busy($('#paybtn'), () => submitCheckout(true, extra)); };
+    $('#ck2').onsubmit = e => { e.preventDefault(); const extra = validatePay(); if (extra) void busy($('#paybtn'), () => submitCheckout(true, extra)); };
     return;
   }
   // paso 3: resultado
@@ -557,7 +566,7 @@ async function submitCheckout(pay, extra = {}) {
     const r = await api(`/sales/${CK.sale.sale_id}/payments`, 'POST', {method: CK.method, amount: CK.sale.total, ...extra});
     CK.sale = r; CK.payMethod = CK.method; CK.reference = (r.payments || []).slice(-1)[0]?.reference;
     CK.step = 3; drawCheckout();
-    if (route().parts[0] === 'pedidos' || route().parts[1] === 'pedidos') render();
+    if (route().parts[0] === 'pedidos' || route().parts[1] === 'pedidos') void render();
   } catch (e) {
     CK.error = `El pedido #${CK.sale.sale_id} quedó registrado, pero el pago no se completó: ${e.message}. Puedes reintentar o pagarlo luego desde “Mis pedidos”.`;
     CK.step = 2; drawCheckout();
@@ -566,7 +575,7 @@ async function submitCheckout(pay, extra = {}) {
 A.pay = run(async id => openPay(await api('/sales/' + id)));
 A.cancel = run(async id => {
   if (!await confirmBox('Cancelar pedido', `¿Seguro que deseas cancelar el pedido #${id}? Los productos vuelven al inventario.`, 'Sí, cancelar', true)) return;
-  await api(`/sales/${id}/cancel`, 'POST'); toast(`Pedido #${id} cancelado`, 'ok'); delete S.cache.allProducts; render();
+  await api(`/sales/${id}/cancel`, 'POST'); toast(`Pedido #${id} cancelado`, 'ok'); delete S.cache.allProducts; void render();
 });
 A.invoice = run(async (id, btn) => {
   const doit = async () => {
@@ -671,10 +680,10 @@ async function authView(mode, q) {
       <div class="demo"><b>Usuarios de prueba</b> (datos de ejemplo): <button data-u="admin">admin</button>,
         <button data-u="lhernandez">cliente</button>, <button data-u="pmartinez">empacador</button>,
         <button data-u="dmoreno">repartidor</button> · contraseña <code>Repuestos#2026</code></div>`;
-    const captcha = async () => { try { const c = await api('/auth/captcha'); $('#capimg').innerHTML = c.svg; $('[name=captcha_token]').value = c.token; $('[name=captcha]').value = ''; } catch (e) { $('#lerr').textContent = e.message; } };
-    $('#capnew').onclick = captcha; captcha();
+    const captcha = async () => { try { const c = await api('/auth/captcha'); $('#capimg').replaceChildren(Object.assign(new Image(), {src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(c.svg), alt: 'Código de verificación'})); $('[name=captcha_token]').value = c.token; $('[name=captcha]').value = ''; } catch (e) { $('#lerr').textContent = e.message; } };
+    $('#capnew').onclick = captcha; void captcha();
     $('#eye').onclick = () => { const i = $('[name=password]'); i.type = i.type === 'password' ? 'text' : 'password'; };
-    $$('.demo button').forEach(b => b.onclick = () => { $('[name=usuario]').value = b.dataset.u; $('[name=password]').value = 'Repuestos#2026'; $('[name=captcha]').focus(); });
+    $$('.demo button').forEach(b => b.onclick = () => { $('[name=usuario]').value = b.dataset.u; $('[name=password]').focus(); });
     $('#lf').onsubmit = async e => {
       e.preventDefault(); const d = formData(e.target), btn = e.target.querySelector('.btn');
       if (!d.usuario || !d.password) return $('#lerr').textContent = 'Escribe tu usuario y contraseña.';
@@ -685,7 +694,7 @@ async function authView(mode, q) {
           setSession(r); S.cache = {};
           toast(`Bienvenido, ${r.username}`, 'ok');
           go(next ? '/' + next : STAFF.includes(r.role) ? '/admin' : '/');
-        } catch (err) { $('#lerr').textContent = err.message; captcha(); }
+        } catch (err) { $('#lerr').textContent = err.message; void captcha(); }
       });
     };
   } else {
@@ -734,7 +743,7 @@ async function adminShell(section, q) {
         <option value="light" ${S.theme === 'light' ? 'selected' : ''}>Tema claro</option><option value="dark" ${S.theme === 'dark' ? 'selected' : ''}>Tema oscuro</option></select></header>
     <main class="acontent" id="main" tabindex="-1"><div class="skel" style="height:120px"></div><div class="skel"></div></main></div></div>`;
   await ({resumen: aResumen, pedidos: aPedidos, entregas: aEntregas, inventario: aInventario, productos: aProductos, reportes: aReportes, usuarios: aUsuarios, auditoria: aAuditoria}[cur])(q);
-  badgeCounts();
+  void badgeCounts();
 }
 async function badgeCounts() {
   try {
@@ -838,11 +847,11 @@ async function aEntregas() {
       {h: '<span class="sr">Acciones</span>', cls: 'num', v: d => `<div class="acts">${act(d)}</div>`}]});
   $$('[data-st]').forEach(b => b.onclick = () => { st = b.dataset.st; $$('[data-st]').forEach(x => x.classList.toggle('on', x === b)); tb.draw(); });
 }
-A.prepare = run(async (id, btn) => busy(btn, async () => { const d = await api(`/deliveries/${id}/prepare`, 'POST'); toast(`Despacho preparado · guía ${d.tracking_number}`, 'ok'); render(); }));
-A.assign = run(async id => { const v = $('#r' + id).value; if (!v) return toast('Selecciona un repartidor', 'bad'); await api(`/deliveries/${id}/assign`, 'POST', {user_id: +v}); toast('Repartidor asignado', 'ok'); render(); });
+A.prepare = run(async (id, btn) => busy(btn, async () => { const d = await api(`/deliveries/${id}/prepare`, 'POST'); toast(`Despacho preparado · guía ${d.tracking_number}`, 'ok'); void render(); }));
+A.assign = run(async id => { const v = $('#r' + id).value; if (!v) return toast('Selecciona un repartidor', 'bad'); await api(`/deliveries/${id}/assign`, 'POST', {user_id: +v}); toast('Repartidor asignado', 'ok'); void render(); });
 A.status = run(async (id, status) => {
   if (status === 'entregado' && !await confirmBox('Confirmar entrega', `¿El cliente recibió la entrega #${id}?`, 'Sí, entregado')) return;
-  await api(`/deliveries/${id}/status`, 'PATCH', {status}); toast('Estado actualizado', 'ok'); render();
+  await api(`/deliveries/${id}/status`, 'PATCH', {status}); toast('Estado actualizado', 'ok'); void render();
 });
 
 /* ---- inventario ---- */
@@ -914,7 +923,7 @@ A.prodForm = run(async id => {
           if (!S.wh) { const w = await api('/warehouses?state=true'); S.wh = (w[0] || {}).company_warehouse_id || 1; }
           await api('/inventory', 'POST', {product_id: prod.product_id, company_warehouse_id: S.wh, quantity_available: +d.stock, minimum_stock: 3, maximum_stock: 120, reorder_stock: 5});
         }
-        delete S.cache.allProducts; closeModal(); toast(p ? 'Producto actualizado' : 'Producto creado', 'ok'); render();
+        delete S.cache.allProducts; closeModal(); toast(p ? 'Producto actualizado' : 'Producto creado', 'ok'); void render();
       } catch (err) { $('#perr').textContent = err.message; }
     });
   };
@@ -922,7 +931,7 @@ A.prodForm = run(async id => {
 A.delProd = run(async id => {
   const p = A._prods.find(x => x.product_id === id);
   if (!await confirmBox('Desactivar producto', `“${p.name}” dejará de mostrarse en la tienda. El historial de ventas se conserva.`, 'Desactivar', true)) return;
-  await api('/products/' + id, 'DELETE'); delete S.cache.allProducts; toast('Producto desactivado', 'ok'); render();
+  await api('/products/' + id, 'DELETE'); delete S.cache.allProducts; toast('Producto desactivado', 'ok'); void render();
 });
 
 /* ---- usuarios ---- */
@@ -957,7 +966,7 @@ A.userEdit = run(async id => {
   $('#ue').onsubmit = async e => {
     e.preventDefault(); const d = formData(e.target);
     await busy(e.target.querySelector('.mfoot .btn:last-child'), async () => {
-      try { await api('/usuarios/' + id, 'PUT', {role: d.role, status: !!d.status, ...(d.password && {password: d.password})}); closeModal(); toast('Usuario actualizado', 'ok'); render(); }
+      try { await api('/usuarios/' + id, 'PUT', {role: d.role, status: !!d.status, ...(d.password && {password: d.password})}); closeModal(); toast('Usuario actualizado', 'ok'); void render(); }
       catch (err) { $('#ueerr').textContent = err.message; }
     });
   };
@@ -965,7 +974,7 @@ A.userEdit = run(async id => {
 A.userKill = run(async id => {
   const u = A._users.find(x => x.user_id === id);
   if (!await confirmBox('Cerrar sesiones', `Se cerrarán las ${u.sesiones_activas} sesión(es) activa(s) de ${u.username}.`, 'Cerrar sesiones', true)) return;
-  const r = await api(`/usuarios/${id}/cerrar-sesiones`, 'POST'); toast(`Se cerraron ${r.sesiones} sesión(es)`, 'ok'); render();
+  const r = await api(`/usuarios/${id}/cerrar-sesiones`, 'POST'); toast(`Se cerraron ${r.sesiones} sesión(es)`, 'ok'); void render();
 });
 A.userForm = run(async () => {
   const [dt, ct] = await Promise.all([api('/document-types?state=true'), api('/cities?state=true')]);
@@ -984,7 +993,7 @@ A.userForm = run(async () => {
   $('#uf').onsubmit = async e => {
     e.preventDefault();
     await busy(e.target.querySelector('.mfoot .btn:last-child'), async () => {
-      try { await api('/usuarios', 'POST', formData(e.target)); closeModal(); toast('Usuario creado', 'ok'); render(); }
+      try { await api('/usuarios', 'POST', formData(e.target)); closeModal(); toast('Usuario creado', 'ok'); void render(); }
       catch (err) { $('#uerr').textContent = err.message; }
     });
   };
@@ -1055,4 +1064,4 @@ async function aAuditoria(q) {
 }
 
 Object.assign(window, {closeModal, go, logout, S, store, $});
-render();
+void render();

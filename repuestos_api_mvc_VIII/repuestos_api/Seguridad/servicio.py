@@ -13,7 +13,7 @@ from .modelos import Rol, Usuario
 from .repositorio import RepositorioAuditoria, RepositorioUsuarios
 from .tokens import ClaimsToken, ServicioJWT, TokenInvalido
 
-_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
+_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s.]+(?:\.[^@\s.]+)*\.[^@\s.]{2,}$")   # sin solapamiento: tiempo lineal
 
 
 class ErrorAutenticacion(Exception):
