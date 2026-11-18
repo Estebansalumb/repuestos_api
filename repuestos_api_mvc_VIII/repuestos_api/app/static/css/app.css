@@ -270,7 +270,7 @@ textarea.input{min-height:80px;resize:vertical}
 .auth{min-height:100vh;background-color:var(--forest);
   background-image:linear-gradient(rgba(47,179,68,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(47,179,68,.10) 1px,transparent 1px),radial-gradient(circle at 20% 30%,#14502a 0,transparent 55%),radial-gradient(circle at 80% 80%,#0f3f21 0,transparent 50%);
   background-size:22px 22px,22px 22px,100% 100%,100% 100%;padding:24px;display:flex;flex-direction:column}
-.auth .logo{color:#fff;align-self:flex-start;background:rgba(255,255,255,.95);color:#15201a;padding:8px 14px;border-radius:12px}
+.auth .logo{align-self:flex-start;background:rgba(255,255,255,.95);color:#15201a;padding:8px 14px;border-radius:12px}
 .auth .panes{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:34px;max-width:1080px;width:100%;margin:24px auto;align-items:stretch}
 @media(max-width:880px){.auth .panes{grid-template-columns:1fr}.carpane{min-height:340px}}
 .carpane{position:relative;border-radius:22px;overflow:hidden;background:linear-gradient(160deg,#1b6b34 0%,#0e3d1f 60%,#082814 100%);color:#fff;padding:30px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:var(--shadow-lg)}
@@ -360,6 +360,6 @@ textarea.input{min-height:80px;resize:vertical}
 @keyframes tin{from{transform:translateY(8px);opacity:0}}
 .captcha{display:flex;gap:10px;align-items:center;margin-bottom:6px}
 .captcha #capimg{display:block;min-height:56px;min-width:168px;border-radius:8px;border:1px solid var(--line);overflow:hidden;background:#f1f6f2}
-.captcha #capimg svg{display:block}
+.captcha #capimg svg,.captcha #capimg img{display:block}
 input[name=captcha]{text-transform:uppercase;letter-spacing:4px;font-weight:700}
 input[name=captcha]::placeholder{text-transform:none;letter-spacing:normal;font-weight:400}
